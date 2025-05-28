@@ -1,23 +1,23 @@
 defmodule Confuse do
   @moduledoc """
+  Parse config files based on the libconfuse format.
   """
 
-  import NimbleParsec
   import Confuse.Helpers
+  import NimbleParsec
 
   defcombinator(
     :statement,
-    repeat(
-      choice([
-        block(),
-        function_call(),
-        kv(),
-        blank(),
-        comment(),
-        multiline_comment()
-      ])
-      |> ignore(whitespace_or_end())
-    )
+    choice([
+      block(),
+      function_call(),
+      kv(),
+      blank(),
+      comment(),
+      multiline_comment()
+    ])
+    |> ignore(whitespace_or_end())
+    |> repeat()
   )
 
   defparsec(:parser, config())

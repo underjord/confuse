@@ -1,4 +1,13 @@
 defmodule Confuse.Fwup do
+  @moduledoc """
+  Special-purpose functionality for usage of config files by the [fwup](https://github.com/fwup-home/fwup) tool.
+
+  Primarily to provide functionality for Nerves firmware update introspection.
+  """
+
+  @doc """
+  Get all tasks with their delta-enabled resources.
+  """
   def get_delta_files(file) do
     with {:ok, contents} <- File.read(file),
          {:ok, parsed} <- Confuse.parse(contents) do
@@ -20,14 +29,7 @@ defmodule Confuse.Fwup do
         contents
         |> Enum.flat_map(fn
           {{"on-resource", resource}, contents} ->
-            if Enum.any?(contents, fn
-                 {"delta-source-" <> _, _} -> true
-                 _ -> false
-               end) do
-              [resource]
-            else
-              []
-            end
+            only_resource_with_deltas(resource, contents)
 
           _ ->
             []
@@ -36,6 +38,17 @@ defmodule Confuse.Fwup do
         |> Enum.uniq()
 
       {task, items}
+    end
+  end
+
+  defp only_resource_with_deltas(resource, contents) do
+    if Enum.any?(contents, fn
+         {"delta-source-" <> _, _} -> true
+         _ -> false
+       end) do
+      [resource]
+    else
+      []
     end
   end
 end

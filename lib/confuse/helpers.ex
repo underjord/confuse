@@ -1,33 +1,27 @@
 defmodule Confuse.Helpers do
   import NimbleParsec
 
-  def key_char, do: repeat(ascii_char([?a..?z, ?A..?Z, ?0..?9, ?-, ?_, ?.]))
-  def bare_string, do: repeat(ascii_char([?a..?z, ?A..?Z, ?0..?9, ?-, ?_, ?., ?$, ?{, ?}]))
-  def single_any_char, do: ascii_char([32..126])
+  def key_char(), do: repeat(ascii_char([?a..?z, ?A..?Z, ?0..?9, ?-, ?_, ?.]))
+  def bare_string(), do: repeat(ascii_char([?a..?z, ?A..?Z, ?0..?9, ?-, ?_, ?., ?$, ?{, ?}]))
+  def single_any_char(), do: ascii_char([32..126])
 
-  def string_except_double_quotes,
-    do:
-      repeat(
-        choice([
-          ascii_char([32..33, 35..126]),
-          # allow \"
-          string("\\\"")
-        ])
-      )
+  # allow \"
+  def string_except_double_quotes(),
+    do: repeat(choice([ascii_char([32..33, 35..126]), string("\\\"")]))
 
-  def string_except_single_quotes, do: repeat(ascii_char([32..38, 40..126]))
+  def string_except_single_quotes(), do: repeat(ascii_char([32..38, 40..126]))
 
-  def spaces_and_tabs, do: repeat(choice([string(" "), string("\t")]))
+  def spaces_and_tabs(), do: repeat(choice([string(" "), string("\t")]))
 
-  def single_whitespace, do: choice([string(" "), string("\t"), string("\n")])
+  def single_whitespace(), do: choice([string(" "), string("\t"), string("\n")])
 
-  def whitespace, do: repeat(single_whitespace())
+  def whitespace(), do: repeat(single_whitespace())
 
-  def whitespace_or_end, do: repeat(choice([string(" "), string("\t"), string("\n")]))
+  def whitespace_or_end(), do: repeat(choice([string(" "), string("\t"), string("\n")]))
 
-  def separated_string, do: choice([quoted_string(), key_char()])
+  def separated_string(), do: choice([quoted_string(), key_char()])
 
-  def quoted_string,
+  def quoted_string(),
     do:
       choice([
         ignore(string("\"")) |> concat(string_except_double_quotes()) |> ignore(string("\"")),
@@ -42,14 +36,14 @@ defmodule Confuse.Helpers do
     ])
   end
 
-  def tuple_item,
+  def tuple_item(),
     do:
       quoted_string()
       |> ignore(whitespace())
       |> ignore(optional(string(",")))
       |> ignore(whitespace())
 
-  def tuple,
+  def tuple(),
     do:
       ignore(string("{"))
       |> ignore(whitespace())
@@ -58,7 +52,7 @@ defmodule Confuse.Helpers do
       |> ignore(string("}"))
       |> ignore(whitespace_or_end())
 
-  def arg,
+  def arg(),
     do:
       choice([
         quoted_string() |> ignore(choice([string(","), string(")")])),
@@ -67,10 +61,9 @@ defmodule Confuse.Helpers do
       ])
       |> ignore(whitespace())
 
-  def blank,
-    do: ignore(single_whitespace())
+  def blank(), do: ignore(single_whitespace())
 
-  def comment,
+  def comment(),
     do:
       ignore(choice([string("#"), string("// "), string("///"), string("//")]))
       |> repeat(ascii_char([{:not, 10}]))
@@ -78,7 +71,7 @@ defmodule Confuse.Helpers do
       |> tag(:comment)
       |> ignore(whitespace_or_end())
 
-  def multiline_comment,
+  def multiline_comment(),
     do:
       ignore(string("/*"))
       |> repeat(single_any_char())
@@ -86,14 +79,9 @@ defmodule Confuse.Helpers do
       |> tag(:comment)
       |> ignore(whitespace_or_end())
 
-  def args,
-    do:
-      ignore(string("("))
-      |> ignore(whitespace())
-      |> repeat(arg())
-      |> tag(:args)
+  def args(), do: ignore(string("(")) |> ignore(whitespace()) |> repeat(arg()) |> tag(:args)
 
-  def function_call,
+  def function_call(),
     do:
       key_char()
       |> tag(:function)
@@ -101,24 +89,21 @@ defmodule Confuse.Helpers do
       |> tag(:function_call)
       |> ignore(whitespace_or_end())
 
-  def value,
+  # Only grab integer if terminated by whitespace
+  def value(),
     do:
       choice([
         quoted_string() |> tag(:string),
-        # Only grab integer if terminated by whitespace
         integer(min: 1) |> ignore(single_whitespace()) |> unwrap_and_tag(:integer),
         tuple() |> tag(:tuple),
         bare_string() |> tag(:string)
       ])
 
-  def key,
+  def key(),
     do:
-      key_char()
-      |> ignore(spaces_and_tabs())
-      |> ignore(string("="))
-      |> ignore(spaces_and_tabs())
+      key_char() |> ignore(spaces_and_tabs()) |> ignore(string("=")) |> ignore(spaces_and_tabs())
 
-  def block_start_with_label,
+  def block_start_with_label(),
     do:
       key_char()
       |> tag(:tag)
@@ -128,12 +113,9 @@ defmodule Confuse.Helpers do
       |> ignore(string("{"))
       |> ignore(whitespace())
 
-  def block_label,
-    do:
-      separated_string()
-      |> tag(:label)
+  def block_label(), do: separated_string() |> tag(:label)
 
-  def block_start_no_label,
+  def block_start_no_label(),
     do:
       key_char()
       |> tag(:tag)
@@ -141,20 +123,9 @@ defmodule Confuse.Helpers do
       |> ignore(string("{"))
       |> ignore(whitespace())
 
-  def block_start,
-    do:
-      choice([
-        block_start_with_label(),
-        block_start_no_label()
-      ])
+  def block_start(), do: choice([block_start_with_label(), block_start_no_label()])
 
-  def kv,
-    do:
-      key()
-      |> tag(:key)
-      |> concat(value())
-      |> tag(:kv)
-      |> ignore(whitespace_or_end())
+  def kv(), do: key() |> tag(:key) |> concat(value()) |> tag(:kv) |> ignore(whitespace_or_end())
 
   def block_body(),
     do:
@@ -163,12 +134,7 @@ defmodule Confuse.Helpers do
       |> ignore(whitespace_or_end())
       |> ignore(string("}"))
 
-  def block,
-    do:
-      block_start()
-      |> concat(block_body())
-      |> tag(:block)
+  def block(), do: block_start() |> concat(block_body()) |> tag(:block)
 
-  def config,
-    do: parsec({Confuse, :statement})
+  def config(), do: parsec({Confuse, :statement})
 end

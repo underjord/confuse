@@ -1,7 +1,7 @@
 %{
   {"mbr", "mbr-a"} => %{
     {"partition", "0"} => %{
-      "block-count" => 38630,
+      "block-count" => 38_630,
       "block-offset" => "63",
       "boot" => "true",
       "type" => 12
@@ -51,7 +51,7 @@
   },
   {"file-resource", "bcm2711-rpi-400.dtb"} => %{
     "blake2b-256" => "4ae37e4f6730bc6cfa92bdce9f163189a5ede659ec5519c6d46881dd92835a93",
-    "length" => 55808
+    "length" => 55_808
   },
   {"uboot-environment", "uboot-env"} => %{"block-count" => 16, "block-offset" => 16},
   {"file-resource", "dwc2.dtbo"} => %{
@@ -65,7 +65,7 @@
   "meta-product" => "berlin2024",
   {"file-resource", "bcm2711-rpi-cm4.dtb"} => %{
     "blake2b-256" => "9ae0a49730bf1baac3badf2fdb93b27febddb09da6f0c89e565ff0f85d26c9b3",
-    "length" => 56444
+    "length" => 56_444
   },
   {"file-resource", "i2c-mux.dtbo"} => %{
     "blake2b-256" => "de32be2b79f54426898a3ed4e87e69e18e82149d19a249f83884c2646691b8fe",
@@ -73,7 +73,7 @@
   },
   {"file-resource", "bcm2711-rpi-4-b.dtb"} => %{
     "blake2b-256" => "daf88361aaf76008c0009dba1586f07f429ca5d0266399c4cbe2963ec7961a60",
-    "length" => 55804
+    "length" => 55_804
   },
   {"file-resource", "ramoops.dtbo"} => %{
     "blake2b-256" => "33e28d565a4440d942652af3d8d50b9bc3cf2e1615036f89352b1d09092e8abb",

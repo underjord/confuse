@@ -1,5 +1,6 @@
 defmodule ConfuseTest do
   use ExUnit.Case
+
   doctest Confuse
 
   # add "libconfuse-test"
@@ -21,12 +22,9 @@ defmodule ConfuseTest do
     assert {:ok, output} = Confuse.parse(cfg)
 
     if output != data do
+      # This is helpful output when fixing things
       IO.puts("Error in #{config}")
-      IO.inspect(output, limit: :infinity, label: config)
-    end
-
-    if output != data do
-      File.write("#{config}.txt", inspect(output, limit: :infinity))
+      IO.puts(inspect(output, limit: :infinity, label: config))
     end
 
     assert output == data
