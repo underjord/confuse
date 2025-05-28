@@ -2,6 +2,7 @@ defmodule Confuse.Helpers do
   import NimbleParsec
 
   def key_char, do: repeat(ascii_char([?a..?z, ?A..?Z, ?0..?9, ?-, ?_, ?.]))
+  def bare_string, do: repeat(ascii_char([?a..?z, ?A..?Z, ?0..?9, ?-, ?_, ?., ?$, ?{, ?}]))
   def single_any_char, do: ascii_char([32..126])
 
   def string_except_double_quotes,
@@ -60,11 +61,10 @@ defmodule Confuse.Helpers do
   def arg,
     do:
       choice([
-        quoted_string(),
-        optional(string("-")) |> integer(min: 1)
+        quoted_string() |> ignore(choice([string(","), string(")")])),
+        optional(string("-")) |> integer(min: 1) |> ignore(choice([string(","), string(")")])),
+        bare_string() |> ignore(choice([string(","), string(")")]))
       ])
-      |> ignore(whitespace())
-      |> ignore(optional(string(",")))
       |> ignore(whitespace())
 
   def blank,
@@ -81,23 +81,23 @@ defmodule Confuse.Helpers do
   def multiline_comment,
     do:
       ignore(string("/*"))
-      |> repeat(
-        single_any_char()
-        |> debug()
-      )
+      |> repeat(single_any_char())
       |> string("*/")
       |> tag(:comment)
       |> ignore(whitespace_or_end())
+
+  def args,
+    do:
+      ignore(string("("))
+      |> ignore(whitespace())
+      |> repeat(arg())
+      |> tag(:args)
 
   def function_call,
     do:
       key_char()
       |> tag(:function)
-      |> ignore(string("("))
-      |> ignore(whitespace())
-      |> repeat(arg() |> wrap() |> tag(:args))
-      |> ignore(whitespace())
-      |> ignore(string(")"))
+      |> concat(args())
       |> tag(:function_call)
       |> ignore(whitespace_or_end())
 
@@ -105,9 +105,10 @@ defmodule Confuse.Helpers do
     do:
       choice([
         quoted_string() |> tag(:string),
-        integer(min: 1) |> unwrap_and_tag(:integer),
-        tuple()
-        |> tag(:tuple)
+        # Only grab integer if terminated by whitespace
+        integer(min: 1) |> ignore(single_whitespace()) |> unwrap_and_tag(:integer),
+        tuple() |> tag(:tuple),
+        bare_string() |> tag(:string)
       ])
 
   def key,
