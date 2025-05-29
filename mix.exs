@@ -41,7 +41,7 @@ defmodule Confuse.MixProject do
     [
       {:quokka, "~> 2.0", only: [:dev]},
       {:nimble_parsec, "~> 1.0"},
-      {:igniter, "~> 0.5", only: [:dev, :test]},
+      {:igniter, "~> 0.5", optional: true, runtime: false},
       {:ex_doc, "~> 0.31", only: :dev, runtime: false},
       {:dialyxir, "~> 1.0", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: :dev, runtime: false}
