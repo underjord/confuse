@@ -22,14 +22,13 @@ defmodule Confuse do
 
   defparsec(:parser, config())
 
+  @doc """
+  Parse a configuration string into a structured map.
+  """
+  @spec parse(data :: String.t()) :: {:ok, map()} | {:error, :parsing_failed}
   def parse(data) do
-    case parser(data) do
-      {:ok, parsed, _remainder, _, _, _} ->
-        {:ok, make_nice(parsed)}
-
-      {:error, _} ->
-        {:error, :parsing_failed}
-    end
+    {:ok, parsed, _remainder, _, _, _} = parser(data)
+    {:ok, make_nice(parsed)}
   end
 
   defp make_nice(parsed) do

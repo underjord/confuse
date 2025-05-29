@@ -8,6 +8,7 @@ defmodule Confuse.Fwup do
   @doc """
   Get all tasks with their delta-enabled resources.
   """
+  @spec get_delta_files(file :: String.t()) :: map()
   def get_delta_files(file) do
     with {:ok, contents} <- File.read(file),
          {:ok, parsed} <- Confuse.parse(contents) do

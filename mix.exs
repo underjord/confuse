@@ -12,18 +12,18 @@ defmodule Confuse.MixProject do
       deps: deps(),
 
       # Docs
-      name: "VCNL4040",
-      description: "Driver for the VCNL4040 ambient light and proximity sensor",
-      source_url: "https://github.com/underjord/vcnl4040",
+      name: "Confuse",
+      description: "Configuration parser for libconfuse style config files.",
+      source_url: "https://github.com/underjord/confuse",
       docs: [
         # The main page in the docs
         main: "readme",
         extras: ["README.md"]
       ],
       package: [
-        name: :vcnl4040,
+        name: :confuse,
         licenses: ["MIT"],
-        links: %{"GitHub" => "https://github.com/underjord/vcnl4040"}
+        links: %{"GitHub" => "https://github.com/underjord/confuse"}
       ],
       aliases: aliases()
     ]
