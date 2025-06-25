@@ -25,7 +25,8 @@ defmodule Confuse.MixProject do
         licenses: ["MIT"],
         links: %{"GitHub" => "https://github.com/underjord/confuse"}
       ],
-      aliases: aliases()
+      aliases: aliases(),
+      dialyzer: dialyzer()
     ]
   end
 
@@ -36,29 +37,56 @@ defmodule Confuse.MixProject do
     ]
   end
 
+  def docs() do
+    [
+      main: "readme",
+      extras: ["README.md"]
+    ]
+  end
+
+  def package() do
+    [
+      name: :confuse,
+      licenses: ["Apache-2.0"],
+      links: %{"GitHub" => "https://github.com/underjord/confuse"}
+    ]
+  end
+
+  def aliases() do
+    [
+      check: [
+        "hex.audit",
+        "compile --warnings-as-errors --force",
+        "format --check-formatted",
+        "credo",
+        "deps.unlock --check-unused",
+        "dialyzer",
+        "spellweaver.check"
+      ]
+    ]
+  end
+
+  def dialyzer() do
+    [
+      plt_add_apps: [:mix],
+      ignore_warnings: ".dialyzer_ignore.exs"
+    ]
+  end
+
   # Run "mix help deps" to learn about dependencies.
   defp deps() do
     [
+      {:nstandard, "~> 0.1"},
       {:quokka, "~> 2.0", only: [:dev]},
       {:nimble_parsec, "~> 1.0"},
       {:igniter, "~> 0.5", optional: true, runtime: false},
-      {:ex_doc, "~> 0.31", only: :dev, runtime: false},
-      {:dialyxir, "~> 1.0", only: :dev, runtime: false},
-      {:credo, "~> 1.7", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.31", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:spellweaver, "~> 0.1", only: [:dev, :test], runtime: false}
     ]
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
-
-  defp aliases() do
-    [
-      check: [
-        "compile --warnings-as-errors --force",
-        "format --check-formatted",
-        "credo",
-        "dialyzer"
-      ]
-    ]
-  end
 end
