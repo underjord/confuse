@@ -10,6 +10,12 @@ defmodule Confuse.Fwup do
   """
 
   defmodule Features do
+    @moduledoc """
+    Fwup features.
+
+    Data structure to provide information about fwup features detected in a config file.
+    """
+
     @absolute_minimum_fwup "0.2.0"
     @encrypted_delta_fwup "1.13.0"
     @fat_deltas_fwup "1.10.0"
@@ -36,6 +42,7 @@ defmodule Confuse.Fwup do
             require_fwup_version: Version.t()
           }
 
+    @spec squash([t()]) :: t()
     def squash(feature_usages) do
       feature_usages
       |> Enum.reduce(%Features{}, fn f, acc ->
@@ -122,29 +129,31 @@ defmodule Confuse.Fwup do
     features = Map.get(feature_usage, resource, %Features{})
 
     features =
-      Enum.reduce(resource_contents, features, fn statement, features ->
-        case statement do
-          {"delta-source-raw-" <> _, _} ->
-            %{features | raw_deltas?: true}
-
-          {"delta-source-fat-" <> _, _} ->
-            %{features | fat_deltas?: true}
-
-          {{:function, "raw_write"}, opts} when is_list(opts) ->
-            opts = to_string(opts)
-
-            if opts =~ "cipher=" do
-              %{features | encryption?: true}
-            else
-              features
-            end
-
-          _ ->
-            features
-        end
-      end)
+      Enum.reduce(resource_contents, features, &do_check_feature/2)
 
     Map.put(feature_usage, resource, features)
+  end
+
+  defp do_check_feature(statement, features) do
+    case statement do
+      {"delta-source-raw-" <> _, _} ->
+        %{features | raw_deltas?: true}
+
+      {"delta-source-fat-" <> _, _} ->
+        %{features | fat_deltas?: true}
+
+      {{:function, "raw_write"}, opts} when is_list(opts) ->
+        opts = to_string(opts)
+
+        if opts =~ "cipher=" do
+          %{features | encryption?: true}
+        else
+          features
+        end
+
+      _ ->
+        features
+    end
   end
 
   defp get_tasks(parsed) do
@@ -155,16 +164,18 @@ defmodule Confuse.Fwup do
 
   defp reduce_on_resource(tasks, acc, fun) do
     Enum.reduce(tasks, acc, fn {_task, contents}, acc ->
-      Enum.reduce(contents, acc, fn {task_key, sub_contents}, acc ->
-        case task_key do
-          {"on-resource", resource} ->
-            fun.(resource, sub_contents, acc)
-
-          _ ->
-            acc
-        end
+      Enum.reduce(contents, acc, fn item, acc ->
+        on_resource(item, acc, fun)
       end)
     end)
+  end
+
+  defp on_resource({{"on-resource", resource}, sub_contents}, acc, fun) do
+    fun.(resource, sub_contents, acc)
+  end
+
+  defp on_resource(_, acc, _) do
+    acc
   end
 
   defp only_tasks_with_deltas(tasks) do
