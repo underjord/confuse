@@ -22,7 +22,10 @@ defmodule Confuse.Fwup do
     @raw_deltas_fwup "1.6.0"
     @encryption_fwup "1.5.0"
 
-    @versions %{
+    @complete_versions %{
+      encryption?: @encryption_fwup
+    }
+    @delta_versions %{
       raw_deltas?: @raw_deltas_fwup,
       fat_deltas?: @fat_deltas_fwup,
       encryption?: @encryption_fwup,
@@ -32,18 +35,24 @@ defmodule Confuse.Fwup do
               fat_deltas?: false,
               encryption?: false,
               encrypted_deltas?: false,
-              require_fwup_version: Version.parse!(@absolute_minimum_fwup)
+              specified_fwup_version: nil,
+              complete_fwup_version: Version.parse!(@absolute_minimum_fwup),
+              delta_fwup_version: Version.parse!(@raw_deltas_fwup)
 
     @type t() :: %__MODULE__{
             raw_deltas?: boolean(),
             fat_deltas?: boolean(),
             encryption?: boolean(),
             encrypted_deltas?: boolean(),
-            require_fwup_version: Version.t()
+            specified_fwup_version: Version.t() | nil,
+            complete_fwup_version: Version.t(),
+            delta_fwup_version: Version.t()
           }
 
-    @spec squash([t()]) :: t()
-    def squash(feature_usages) do
+    @spec squash([t()], String.t() | nil) :: t()
+    def squash(feature_usages, fwup_version) do
+      fwup_version = Version.parse!(fwup_version || @absolute_minimum_fwup)
+
       feature_usages
       |> Enum.reduce(%Features{}, fn f, acc ->
         acc =
@@ -75,12 +84,12 @@ defmodule Confuse.Fwup do
             acc
         end
       end)
-      |> calculate_version()
+      |> calculate_version(fwup_version)
     end
 
-    defp calculate_version(features) do
-      version =
-        @versions
+    defp calculate_version(features, minimum_version) do
+      complete_version =
+        @complete_versions
         |> Enum.filter(fn {feature, _} ->
           Map.get(features, feature)
         end)
@@ -88,10 +97,28 @@ defmodule Confuse.Fwup do
         |> Enum.sort({:desc, Version})
         |> case do
           [highest | _] -> highest
-          [] -> @absolute_minimum_fwup
+          [] -> minimum_version
         end
 
-      %{features | require_fwup_version: version}
+      delta_version =
+        @delta_versions
+        |> Enum.filter(fn {feature, _} ->
+          Map.get(features, feature)
+        end)
+        |> Enum.map(fn {_, v} -> Version.parse!(v) end)
+        |> Enum.sort({:desc, Version})
+        |> case do
+          [highest | _] ->
+            highest
+
+          [] ->
+            case Version.compare(@raw_deltas_fwup, minimum_version) do
+              :gt -> @raw_deltas_fwup
+              _ -> minimum_version
+            end
+        end
+
+      %{features | complete_fwup_version: complete_version, delta_fwup_version: delta_version}
     end
   end
 
@@ -119,7 +146,7 @@ defmodule Confuse.Fwup do
         |> get_tasks()
         |> reduce_on_resource(%{}, &check_feature/3)
         |> Map.values()
-        |> Features.squash()
+        |> Features.squash(parsed["require-fwup-version"])
 
       {:ok, output}
     end

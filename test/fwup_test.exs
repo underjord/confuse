@@ -11,7 +11,8 @@ defmodule Confuse.FwupTest do
   end
 
   test "detect fwup file features, only raw deltas" do
-    fat_delta_version = Version.parse!("1.6.0")
+    conf_version = Version.parse!("0.5.0")
+    raw_delta_version = Version.parse!("1.6.0")
 
     assert {:ok,
             %Confuse.Fwup.Features{
@@ -19,12 +20,14 @@ defmodule Confuse.FwupTest do
               fat_deltas?: false,
               encryption?: false,
               encrypted_deltas?: false,
-              require_fwup_version: ^fat_delta_version
+              complete_fwup_version: ^conf_version,
+              delta_fwup_version: ^raw_delta_version
             }} =
              Confuse.Fwup.get_feature_usage("test/fixtures/raw_deltas.conf")
   end
 
   test "detect fwup file features, only FAT deltas" do
+    conf_version = Version.parse!("0.6.0")
     fat_delta_version = Version.parse!("1.10.0")
 
     assert {:ok,
@@ -33,12 +36,14 @@ defmodule Confuse.FwupTest do
               fat_deltas?: true,
               encryption?: false,
               encrypted_deltas?: false,
-              require_fwup_version: ^fat_delta_version
+              complete_fwup_version: ^conf_version,
+              delta_fwup_version: ^fat_delta_version
             }} =
              Confuse.Fwup.get_feature_usage("test/fixtures/fat_deltas.conf")
   end
 
   test "detect fwup file features, raw and FAT deltas" do
+    conf_version = Version.parse!("0.7.0")
     fat_delta_version = Version.parse!("1.10.0")
 
     assert {:ok,
@@ -47,13 +52,17 @@ defmodule Confuse.FwupTest do
               fat_deltas?: true,
               encryption?: false,
               encrypted_deltas?: false,
-              require_fwup_version: ^fat_delta_version
+              complete_fwup_version: ^conf_version,
+              delta_fwup_version: ^fat_delta_version
             }} =
              Confuse.Fwup.get_feature_usage("test/fixtures/with_deltas.conf")
+
+    # TODO: Ensure the required version from fwup conf overrides the calculated minimum
+    # TODO: Ensure we have tests for that
   end
 
   test "detect fwup file features, encrypted, no deltas" do
-    encrypted_delta_version = Version.parse!("1.5.0")
+    encrypted_version = Version.parse!("1.5.0")
 
     assert {:ok,
             %Confuse.Fwup.Features{
@@ -61,12 +70,14 @@ defmodule Confuse.FwupTest do
               fat_deltas?: false,
               encryption?: true,
               encrypted_deltas?: false,
-              require_fwup_version: ^encrypted_delta_version
+              complete_fwup_version: ^encrypted_version,
+              delta_fwup_version: ^encrypted_version
             }} =
              Confuse.Fwup.get_feature_usage("test/fixtures/encrypted.conf")
   end
 
   test "detect fwup file features, encrypted (raw) deltas" do
+    encrypted_version = Version.parse!("1.5.0")
     encrypted_delta_version = Version.parse!("1.13.0")
 
     assert {:ok,
@@ -75,9 +86,25 @@ defmodule Confuse.FwupTest do
               fat_deltas?: true,
               encryption?: true,
               encrypted_deltas?: true,
-              require_fwup_version: ^encrypted_delta_version
+              complete_fwup_version: ^encrypted_version,
+              delta_fwup_version: ^encrypted_delta_version
             }} =
              Confuse.Fwup.get_feature_usage("test/fixtures/with_encrypted_deltas.conf")
+  end
+
+  test "detect fwup file features, high version requirement, no features" do
+    conf_version = Version.parse!("1.13.0")
+
+    assert {:ok,
+            %Confuse.Fwup.Features{
+              raw_deltas?: false,
+              fat_deltas?: false,
+              encryption?: false,
+              encrypted_deltas?: false,
+              complete_fwup_version: ^conf_version,
+              delta_fwup_version: ^conf_version
+            }} =
+             Confuse.Fwup.get_feature_usage("test/fixtures/high_requirement.conf")
   end
 
   @tag :tmp_dir
