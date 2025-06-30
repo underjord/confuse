@@ -107,6 +107,22 @@ defmodule Confuse.FwupTest do
              Confuse.Fwup.get_feature_usage("test/fixtures/high_requirement.conf")
   end
 
+  test "no features, no requirements" do
+    complete_version = Version.parse!("0.2.0")
+    delta_version = Version.parse!("1.6.0")
+
+    assert {:ok,
+            %Confuse.Fwup.Features{
+              raw_deltas?: false,
+              fat_deltas?: false,
+              encryption?: false,
+              encrypted_deltas?: false,
+              complete_fwup_version: ^complete_version,
+              delta_fwup_version: ^delta_version
+            }} =
+             Confuse.Fwup.get_feature_usage("test/fixtures/blank.conf")
+  end
+
   @tag :tmp_dir
   test "fail to load file", %{tmp_dir: tmp_dir} do
     path = Path.join(tmp_dir, "foo.conf")

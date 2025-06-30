@@ -88,6 +88,8 @@ defmodule Confuse.Fwup do
     end
 
     defp calculate_version(features, minimum_version) do
+      raw_deltas_version = Version.parse!(@raw_deltas_fwup)
+
       complete_version =
         @complete_versions
         |> Enum.filter(fn {feature, _} ->
@@ -112,8 +114,8 @@ defmodule Confuse.Fwup do
             highest
 
           [] ->
-            case Version.compare(@raw_deltas_fwup, minimum_version) do
-              :gt -> @raw_deltas_fwup
+            case Version.compare(raw_deltas_version, minimum_version) do
+              :gt -> raw_deltas_version
               _ -> minimum_version
             end
         end
