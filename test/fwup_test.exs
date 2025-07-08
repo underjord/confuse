@@ -56,9 +56,6 @@ defmodule Confuse.FwupTest do
               delta_fwup_version: ^fat_delta_version
             }} =
              Confuse.Fwup.get_feature_usage("test/fixtures/with_deltas.conf")
-
-    # TODO: Ensure the required version from fwup conf overrides the calculated minimum
-    # TODO: Ensure we have tests for that
   end
 
   test "detect fwup file features, encrypted, no deltas" do
@@ -90,6 +87,63 @@ defmodule Confuse.FwupTest do
               delta_fwup_version: ^encrypted_delta_version
             }} =
              Confuse.Fwup.get_feature_usage("test/fixtures/with_encrypted_deltas.conf")
+  end
+
+  test "validate delta, essentially all configs work with themselves" do
+    ~w(
+    blank.conf
+    fat_deltas.conf
+    high_requirement.conf
+    libconfuse-test.exs
+    rpi4-fwup.conf
+    rpi4-meta.conf
+    with_deltas.conf
+    encrypted.conf
+    libconfuse-test.conf
+    raw_deltas.conf
+    rpi4-fwup.exs
+    rpi4-meta.exs
+    with_encrypted_deltas.conf)
+    |> Enum.each(fn file ->
+      conf = File.read!(Path.join("test/fixtures", file))
+      assert {:ok, ^file} = {Confuse.Fwup.validate_delta(conf, conf), file}
+    end)
+  end
+
+  test "validate delta, target uses raw deltas, source firmware is encrypted target firmware missing encrypted deltas" do
+    source_conf = File.read!("test/fixtures/encrypted.conf")
+    target_conf = File.read!("test/fixtures/with_deltas.conf")
+    assert {:error, [err]} = Confuse.Fwup.validate_delta(source_conf, target_conf)
+
+    assert err =~
+             "Target uses raw deltas and source firmware uses encryption for the same resource"
+  end
+
+  test "validate delta, target uses raw encrypted deltas, low fwup version" do
+    source_conf = File.read!("test/fixtures/with_encrypted_deltas.conf")
+    target_conf = File.read!("test/fixtures/with_encrypted_deltas.conf")
+
+    assert {:error, [err]} =
+             Confuse.Fwup.validate_delta(source_conf, target_conf, Version.parse!("1.0.0"))
+
+    assert err =~
+             "Delta firmware update requires fwup version"
+  end
+
+  test "validate delta, unlikely raw deltas" do
+    source_conf = File.read!("test/fixtures/no_raw_writes.conf")
+    target_conf = File.read!("test/fixtures/raw_deltas.conf")
+    assert {:error, [err]} = Confuse.Fwup.validate_delta(source_conf, target_conf)
+
+    assert err =~ "Target uses raw deltas but source has no raw writes"
+  end
+
+  test "validate delta, unlikely FAT deltas" do
+    source_conf = File.read!("test/fixtures/no_fat_writes.conf")
+    target_conf = File.read!("test/fixtures/fat_deltas.conf")
+    assert {:error, [err]} = Confuse.Fwup.validate_delta(source_conf, target_conf)
+
+    assert err =~ "Target uses FAT deltas but source has no FAT writes"
   end
 
   test "detect fwup file features, high version requirement, no features" do

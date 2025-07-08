@@ -4,7 +4,7 @@ defmodule Confuse.MixProject do
   def project() do
     [
       app: :confuse,
-      version: "0.1.3",
+      version: "0.1.4",
       elixir: "~> 1.1",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -58,7 +58,7 @@ defmodule Confuse.MixProject do
         "hex.audit",
         "compile --warnings-as-errors --force",
         "format --check-formatted",
-        "credo",
+        "credo --strict",
         "deps.unlock --check-unused",
         "dialyzer",
         "spellweaver.check"

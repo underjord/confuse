@@ -5,10 +5,6 @@ defmodule Confuse.Fwup do
   Primarily to provide functionality for Nerves firmware update introspection.
   """
 
-  @doc """
-  Get all tasks with their delta-enabled resources.
-  """
-
   defmodule Features do
     @moduledoc """
     Fwup features.
@@ -37,7 +33,8 @@ defmodule Confuse.Fwup do
               encrypted_deltas?: false,
               specified_fwup_version: nil,
               complete_fwup_version: Version.parse!(@absolute_minimum_fwup),
-              delta_fwup_version: Version.parse!(@raw_deltas_fwup)
+              delta_fwup_version: Version.parse!(@raw_deltas_fwup),
+              valid?: false
 
     @type t() :: %__MODULE__{
             raw_deltas?: boolean(),
@@ -46,43 +43,30 @@ defmodule Confuse.Fwup do
             encrypted_deltas?: boolean(),
             specified_fwup_version: Version.t() | nil,
             complete_fwup_version: Version.t(),
-            delta_fwup_version: Version.t()
+            delta_fwup_version: Version.t(),
+            valid?: boolean()
           }
 
-    @spec squash([t()], String.t() | nil) :: t()
+    @spec squash([Confuse.Fwup.validation()], String.t() | nil) :: t()
     def squash(feature_usages, fwup_version) do
       fwup_version = Version.parse!(fwup_version || @absolute_minimum_fwup)
 
       feature_usages
-      |> Enum.reduce(%Features{}, fn f, acc ->
-        acc =
-          case f do
-            %{encryption?: true, raw_deltas?: true} ->
-              %{acc | encryption?: true, raw_deltas?: true, encrypted_deltas?: true}
-
-            %{encryption?: true} ->
-              %{acc | encryption?: true}
-
-            _ ->
-              acc
-          end
-
-        acc =
-          case f do
-            %{fat_deltas?: true} ->
-              %{acc | fat_deltas?: true}
-
-            _ ->
-              acc
-          end
-
-        case f do
-          %{raw_deltas?: true} ->
-            %{acc | raw_deltas?: true}
-
-          _ ->
-            acc
-        end
+      |> Enum.reduce(%Features{valid?: true}, fn f, acc ->
+        %{
+          acc
+          | raw_deltas?: acc.raw_deltas? or f.raw_deltas_valid?,
+            fat_deltas?: acc.fat_deltas? or f.fat_deltas_valid?,
+            encryption?:
+              acc.encryption? or (f.raw_write? and f.raw_write_cipher? and f.raw_write_secret?),
+            encrypted_deltas?:
+              acc.encrypted_deltas? or (f.raw_write_cipher? and f.raw_deltas_valid?),
+            # Valid if not using deltas or if deltas are valid
+            valid?:
+              not acc.valid? or
+                ((not f.delta_source_raw_offset? or f.raw_deltas_valid?) and
+                   (not f.delta_source_fat_offset? or f.fat_deltas_valid?))
+        }
       end)
       |> calculate_version(fwup_version)
     end
@@ -124,6 +108,38 @@ defmodule Confuse.Fwup do
     end
   end
 
+  @type validation() :: %{
+          delta_source_raw_offset?: boolean(),
+          delta_source_raw_count?: boolean(),
+          delta_source_raw_options_cipher?: boolean(),
+          delta_source_raw_options_secret?: boolean(),
+          raw_write?: boolean(),
+          raw_write_cipher?: boolean(),
+          raw_write_secret?: boolean(),
+          raw_deltas_valid?: boolean(),
+          delta_source_fat_offset?: boolean(),
+          delta_source_fat_path?: boolean(),
+          fat_write?: boolean(),
+          fat_deltas_valid?: boolean()
+        }
+
+  defp new_validation() do
+    %{
+      delta_source_raw_offset?: false,
+      delta_source_raw_count?: false,
+      delta_source_raw_options_cipher?: false,
+      delta_source_raw_options_secret?: false,
+      raw_write?: false,
+      raw_write_cipher?: false,
+      raw_write_secret?: false,
+      raw_deltas_valid?: false,
+      delta_source_fat_offset?: false,
+      delta_source_fat_path?: false,
+      fat_write?: false,
+      fat_deltas_valid?: false
+    }
+  end
+
   @spec get_delta_files(file :: String.t()) ::
           {:ok, map()} | {:error, :parsing_failed | File.posix()}
   def get_delta_files(file) do
@@ -154,31 +170,124 @@ defmodule Confuse.Fwup do
     end
   end
 
+  @spec validate_delta(
+          source_meta_conf :: String.t(),
+          target_meta_conf :: String.t(),
+          using_fwup_version :: nil | Version.t()
+        ) :: :ok | {:error, list(String.t())}
+  def validate_delta(source_meta_conf, target_meta_conf, using_fwup_version \\ nil) do
+    with {:ok, source} <- Confuse.parse(source_meta_conf),
+         {:ok, target} <- Confuse.parse(target_meta_conf) do
+      s = get_feature_by_resource(source)
+      t = get_feature_by_resource(target)
+
+      fwup_warnings =
+        if using_fwup_version do
+          target_features =
+            t
+            |> Map.values()
+            |> Features.squash(t["require-fwup-version"])
+
+          if Version.compare(using_fwup_version, target_features.delta_fwup_version) == :gt do
+            []
+          else
+            [
+              "Delta firmware update requires fwup version #{target_features.delta_fwup_version} or higher, using #{using_fwup_version}."
+            ]
+          end
+        else
+          []
+        end
+
+      result =
+        s
+        |> Enum.flat_map(fn {resource, v} ->
+          {_, target_resource} = Enum.find(t, fn {r, _} -> r == resource end)
+          validate_delta_resource(resource, v, target_resource)
+        end)
+
+      case result ++ fwup_warnings do
+        [] -> :ok
+        warnings -> {:error, warnings}
+      end
+    end
+  end
+
+  defp validate_delta_resource(resource, sv, tv) do
+    [
+      tv.raw_deltas_valid? and not sv.raw_write? &&
+        "#{resource}: Target uses raw deltas but source has no raw writes.",
+      tv.fat_deltas_valid? and not sv.fat_write? &&
+        "#{resource}: Target uses FAT deltas but source has no FAT writes.",
+      tv.raw_deltas_valid? and sv.raw_write_cipher? and sv.raw_write_secret? and
+        not (tv.delta_source_raw_options_cipher? and tv.delta_source_raw_options_secret?) &&
+        "#{resource}: Target uses raw deltas and source firmware uses encryption for the same resource but target firmware has no cipher or secret options for the resource. This should not be able to work."
+    ]
+    |> Enum.filter(&is_binary/1)
+  end
+
+  defp get_feature_by_resource(parsed) do
+    parsed
+    |> get_tasks()
+    |> reduce_on_resource(%{}, &check_feature/3)
+  end
+
   defp check_feature(resource, resource_contents, feature_usage) do
-    features = Map.get(feature_usage, resource, %Features{})
+    f = Map.get(feature_usage, resource, new_validation())
 
-    features =
-      Enum.reduce(resource_contents, features, &do_check_feature/2)
+    f =
+      Enum.reduce(resource_contents, f, &do_check_feature/2)
 
-    Map.put(feature_usage, resource, features)
+    f = %{
+      f
+      | raw_deltas_valid?:
+          f.raw_write? and f.delta_source_raw_offset? and f.delta_source_raw_count? and
+            (not f.raw_write_cipher? or
+               (f.raw_write_secret? and
+                  f.delta_source_raw_options_cipher? and
+                  f.delta_source_raw_options_secret?)),
+        fat_deltas_valid?:
+          f.fat_write? and f.delta_source_fat_offset? and f.delta_source_fat_path?
+    }
+
+    Map.put(feature_usage, resource, f)
   end
 
   defp do_check_feature(statement, features) do
     case statement do
-      {"delta-source-raw-" <> _, _} ->
-        %{features | raw_deltas?: true}
+      {"delta-source-raw-offset" <> _, _} ->
+        %{features | delta_source_raw_offset?: true}
 
-      {"delta-source-fat-" <> _, _} ->
-        %{features | fat_deltas?: true}
+      {"delta-source-raw-count" <> _, _} ->
+        %{features | delta_source_raw_count?: true}
+
+      {"delta-source-raw-options" <> _, opts} ->
+        opts = to_string(opts)
+
+        %{
+          features
+          | delta_source_raw_options_cipher?: opts =~ "cipher=",
+            delta_source_raw_options_secret?: opts =~ "secret="
+        }
+
+      {"delta-source-fat-offset" <> _, _} ->
+        %{features | delta_source_fat_offset?: true}
+
+      {"delta-source-fat-path" <> _, _} ->
+        %{features | delta_source_fat_path?: true}
 
       {{:function, "raw_write"}, opts} when is_list(opts) ->
         opts = to_string(opts)
 
-        if opts =~ "cipher=" do
-          %{features | encryption?: true}
-        else
+        %{
           features
-        end
+          | raw_write?: true,
+            raw_write_cipher?: opts =~ "cipher=",
+            raw_write_secret?: opts =~ "secret="
+        }
+
+      {{:function, "fat_write"}, _} ->
+        %{features | fat_write?: true}
 
       _ ->
         features
