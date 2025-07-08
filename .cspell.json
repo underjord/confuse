@@ -21,6 +21,7 @@
     "dialyxir",
     "ecto",
     "esbuild",
+    "funlist",
     "fwup",
     "heroicons",
     "hexpm",
