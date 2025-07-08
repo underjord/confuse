@@ -181,13 +181,18 @@ defmodule Confuse.Fwup do
       s = get_feature_by_resource(source)
       t = get_feature_by_resource(target)
 
+      source_features =
+        s
+        |> Map.values()
+        |> Features.squash(s["require-fwup-version"])
+
+      target_features =
+        t
+        |> Map.values()
+        |> Features.squash(t["require-fwup-version"])
+
       fwup_warnings =
         if using_fwup_version do
-          target_features =
-            t
-            |> Map.values()
-            |> Features.squash(t["require-fwup-version"])
-
           if Version.compare(using_fwup_version, target_features.delta_fwup_version) == :gt do
             []
           else
@@ -286,7 +291,20 @@ defmodule Confuse.Fwup do
             raw_write_secret?: opts =~ "secret="
         }
 
+      {"funlist", [_ | ["raw_write" | opts]]} ->
+        opts = Enum.join(opts)
+
+        %{
+          features
+          | raw_write?: true,
+            raw_write_cipher?: opts =~ "cipher=",
+            raw_write_secret?: opts =~ "secret="
+        }
+
       {{:function, "fat_write"}, _} ->
+        %{features | fat_write?: true}
+
+      {"funlist", ["3", "fat_write", _, _]} ->
         %{features | fat_write?: true}
 
       _ ->

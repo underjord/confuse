@@ -110,6 +110,24 @@ defmodule Confuse.FwupTest do
     end)
   end
 
+  test "validate firmware packaged meta.conf, rpi4, no fat_write" do
+    source_conf = File.read!("test/fixtures/rpi4-meta-no-fat-write.conf")
+    target_conf = File.read!("test/fixtures/rpi4-meta-fat-delta.conf")
+    assert {:error, [err]} = Confuse.Fwup.validate_delta(source_conf, target_conf)
+
+    assert err =~
+             "Target uses FAT deltas but source has no FAT writes"
+  end
+
+  test "validate firmware packaged meta.conf, rpi4, no raw_write" do
+    source_conf = File.read!("test/fixtures/rpi4-meta-no-raw-write.conf")
+    target_conf = File.read!("test/fixtures/rpi4-meta.conf")
+    assert {:error, [err]} = Confuse.Fwup.validate_delta(source_conf, target_conf)
+
+    assert err =~
+             "Target uses raw deltas but source has no raw writes"
+  end
+
   test "validate delta, target uses raw deltas, source firmware is encrypted target firmware missing encrypted deltas" do
     source_conf = File.read!("test/fixtures/encrypted.conf")
     target_conf = File.read!("test/fixtures/with_deltas.conf")
