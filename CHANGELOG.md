@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.5
+
+Fix issues where the `Confuse.Fwup` module was not interpreting `meta.conf` style definitions.
+
 ## v0.1.4
 
 Add function for checking delta safety between two fwup configs.
