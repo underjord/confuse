@@ -161,6 +161,8 @@ defmodule Confuse.Fwup do
     end
   end
 
+  @spec get_feature_usage_from_config(config_data :: String.t()) ::
+          {:ok, Features.t()} | {:error, :parsing_failed | File.posix()}
   def get_feature_usage_from_config(config_data) do
     with {:ok, parsed} <- Confuse.parse(config_data) do
       output =
