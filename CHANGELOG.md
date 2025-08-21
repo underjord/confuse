@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.2.0
+
+Add `Confuse.Fwup` functions for processing config that has already been read from file. This allows doing things more efficiently when making multiple calls and so on.
+
 ## v0.1.5
 
 Fix issues where the `Confuse.Fwup` module was not interpreting `meta.conf` style definitions.
