@@ -140,11 +140,10 @@ defmodule Confuse.Fwup do
     }
   end
 
-  @spec get_delta_files(file :: String.t()) ::
+  @spec get_delta_files_from_config(config_data :: String.t()) ::
           {:ok, map()} | {:error, :parsing_failed | File.posix()}
-  def get_delta_files(file) do
-    with {:ok, contents} <- File.read(file),
-         {:ok, parsed} <- Confuse.parse(contents) do
+  def get_delta_files_from_config(config_data) do
+    with {:ok, parsed} <- Confuse.parse(config_data) do
       output =
         parsed
         |> get_tasks()
@@ -154,11 +153,16 @@ defmodule Confuse.Fwup do
     end
   end
 
-  @spec get_feature_usage(file :: String.t()) ::
-          {:ok, Features.t()} | {:error, :parsing_failed | File.posix()}
-  def get_feature_usage(file) do
-    with {:ok, contents} <- File.read(file),
-         {:ok, parsed} <- Confuse.parse(contents) do
+  @spec get_delta_files(file :: String.t()) ::
+          {:ok, map()} | {:error, :parsing_failed | File.posix()}
+  def get_delta_files(file) do
+    with {:ok, contents} <- File.read(file) do
+      get_delta_files_from_config(contents)
+    end
+  end
+
+  def get_feature_usage_from_config(config_data) do
+    with {:ok, parsed} <- Confuse.parse(config_data) do
       output =
         parsed
         |> get_tasks()
@@ -167,6 +171,14 @@ defmodule Confuse.Fwup do
         |> Features.squash(parsed["require-fwup-version"])
 
       {:ok, output}
+    end
+  end
+
+  @spec get_feature_usage(file :: String.t()) ::
+          {:ok, Features.t()} | {:error, :parsing_failed | File.posix()}
+  def get_feature_usage(file) do
+    with {:ok, contents} <- File.read(file) do
+      get_feature_usage_from_config(contents)
     end
   end
 

@@ -10,6 +10,17 @@ defmodule Confuse.FwupTest do
              Confuse.Fwup.get_delta_files("test/fixtures/with_deltas.conf")
   end
 
+  test "detect which fwup files have deltas without file access" do
+    conf = File.read!("test/fixtures/with_deltas.conf")
+
+    assert {:ok,
+            %{
+              "upgrade.a" => ["config.txt", "rootfs.img"],
+              "upgrade.b" => ["config.txt", "rootfs.img"]
+            }} =
+             Confuse.Fwup.get_delta_files_from_config(conf)
+  end
+
   test "detect fwup file features, only raw deltas" do
     conf_version = Version.parse!("0.5.0")
     raw_delta_version = Version.parse!("1.6.0")
@@ -24,6 +35,23 @@ defmodule Confuse.FwupTest do
               delta_fwup_version: ^raw_delta_version
             }} =
              Confuse.Fwup.get_feature_usage("test/fixtures/raw_deltas.conf")
+  end
+
+  test "detect fwup file features, only raw deltas without file access" do
+    conf_version = Version.parse!("0.5.0")
+    raw_delta_version = Version.parse!("1.6.0")
+    conf = File.read!("test/fixtures/raw_deltas.conf")
+
+    assert {:ok,
+            %Confuse.Fwup.Features{
+              raw_deltas?: true,
+              fat_deltas?: false,
+              encryption?: false,
+              encrypted_deltas?: false,
+              complete_fwup_version: ^conf_version,
+              delta_fwup_version: ^raw_delta_version
+            }} =
+             Confuse.Fwup.get_feature_usage_from_config(conf)
   end
 
   test "detect fwup file features, only FAT deltas" do
