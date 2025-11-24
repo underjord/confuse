@@ -15,6 +15,10 @@ defmodule ConfuseTest do
     assert inspect(output, limit: :infinity) =~ "provision.wrongplatform"
   end
 
+  test "parse quoted strings" do
+    test_parse_sample("quoted_strings")
+  end
+
   defp test_parse_sample(config) do
     {data, _} = "test/fixtures/#{config}.exs" |> Code.eval_file()
     cfg = "test/fixtures/#{config}.conf" |> File.read!()

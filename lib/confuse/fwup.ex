@@ -229,12 +229,12 @@ defmodule Confuse.Fwup do
 
   defp validate_delta_resource(resource, sv, tv) do
     [
-      tv.raw_deltas_valid? and not sv.raw_write? &&
+      (tv.raw_deltas_valid? and not sv.raw_write?) &&
         "#{resource}: Target uses raw deltas but source has no raw writes.",
-      tv.fat_deltas_valid? and not sv.fat_write? &&
+      (tv.fat_deltas_valid? and not sv.fat_write?) &&
         "#{resource}: Target uses FAT deltas but source has no FAT writes.",
-      tv.raw_deltas_valid? and sv.raw_write_cipher? and sv.raw_write_secret? and
-        not (tv.delta_source_raw_options_cipher? and tv.delta_source_raw_options_secret?) &&
+      (tv.raw_deltas_valid? and sv.raw_write_cipher? and sv.raw_write_secret? and
+         not (tv.delta_source_raw_options_cipher? and tv.delta_source_raw_options_secret?)) &&
         "#{resource}: Target uses raw deltas and source firmware uses encryption for the same resource but target firmware has no cipher or secret options for the resource. This should not be able to work."
     ]
     |> Enum.filter(&is_binary/1)

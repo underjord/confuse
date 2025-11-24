@@ -12,7 +12,7 @@ defmodule Confuse.Helpers do
   # allow \"
   @spec string_except_double_quotes() :: NimbleParsec.t()
   def string_except_double_quotes(),
-    do: repeat(choice([ascii_char([32..33, 35..126]), string("\\\"")]))
+    do: repeat(choice([replace(string("\\\""), "\""), ascii_char([32..33, 35..126])]))
 
   @spec string_except_single_quotes() :: NimbleParsec.t()
   def string_except_single_quotes(), do: repeat(ascii_char([32..38, 40..126]))

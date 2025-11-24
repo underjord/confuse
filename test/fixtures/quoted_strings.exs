@@ -1,0 +1,5 @@
+%{
+  "start" => "\"I\" am a product with escaped quotes",
+  "middle" => "I am a \"product\" with escaped quotes",
+  "end" => "I am a product with escaped \"quotes\""
+}
