@@ -6,6 +6,29 @@ defmodule Confuse.Fwup do
   """
 
   @doc """
+  Get all necessary detail about the firmware for determining safe delta delivery.
+  """
+  @spec get_feature_usage(file :: String.t()) ::
+          {:ok, map()} | {:error, :parsing_failed | File.posix()}
+  def get_delta_details(file) do
+    with {:ok, contents} <- File.read(file),
+         {:ok, parsed} <- Confuse.parse(contents) do
+      output =
+        parsed
+        |> get_tasks()
+        |> tasks_to_details()
+
+      {:ok, output}
+    end
+  end
+
+  # TODO: Use the plain parser and then a few different functions
+  #       to pull information from that parsed structure
+  # TODO: Get feature usage, almost done, booleans for various features
+  # TODO: Get a structure that is easy to check for compatibility between
+  #       two configs. Including resource file names
+
+  @doc """
   Get all tasks with their delta-enabled resources.
   """
   @spec get_delta_files(file :: String.t()) ::
@@ -44,6 +67,44 @@ defmodule Confuse.Fwup do
 
       {task, items}
     end
+  end
+
+  defp tasks_to_details(tasks) do
+    features_used = %{
+      deltas?: false,
+      raw?: false,
+      fat?: false,
+      encryption?: false
+    }
+
+    tasks
+    |> Enum.reduce(features_used, fn {task, contents}, used ->
+      contents
+      |> Enum.reduce(used, fn {key, value}, used ->
+        case key do
+          {"on-resource", _resource} ->
+            check_usage(usage, value)
+
+          _ ->
+            used
+        end
+      end)
+    end)
+  end
+
+  defp check_usage(usage, value) do
+    Enum.reduce(value, usage, fn {k, _v}, usage ->
+      case k do
+        "delta-source-raw" <> _ ->
+          %{usage | deltas?: true, raw?: true}
+
+        "delta-source-fat" <> _ ->
+          %{usage | deltas?: true, fat?: true}
+
+        "delta-source-raw-options" <> _ ->
+          %{usage | deltas?: true, raw?: true, encryption?: true}
+      end
+    end)
   end
 
   defp only_resource_with_deltas(resource, contents) do
