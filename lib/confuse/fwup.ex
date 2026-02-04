@@ -192,15 +192,15 @@ defmodule Confuse.Fwup do
   def validate_delta(source_meta_conf, target_meta_conf, using_fwup_version \\ nil) do
     with {:ok, source} <- Confuse.parse(source_meta_conf),
          {:ok, target} <- Confuse.parse(target_meta_conf) do
-      s = get_feature_by_resource(source)
-      t = get_feature_by_resource(target)
+      source_features_by_resource = get_features_by_resource(source)
+      target_features_by_resource = get_features_by_resource(target)
 
       fwup_warnings =
         if using_fwup_version do
           target_features =
-            t
+            target_features_by_resource
             |> Map.values()
-            |> Features.squash(t["require-fwup-version"])
+            |> Features.squash(target_features_by_resource["require-fwup-version"])
 
           if Version.compare(using_fwup_version, target_features.delta_fwup_version) == :gt do
             []
@@ -213,12 +213,15 @@ defmodule Confuse.Fwup do
           []
         end
 
+      # Validate any resources in the source that exist in the target
       result =
-        s
-        |> Enum.flat_map(fn {resource, v} ->
-          case Enum.find(t, fn {r, _} -> r == resource end) do
-            {_, target_features} ->
-              validate_delta_resource(resource, v, target_features)
+        source_features_by_resource
+        |> Enum.flat_map(fn {source_resource, source_features} ->
+          case Enum.find(target_features_by_resource, fn {target_resource, _} ->
+                 target_resource == source_resource
+               end) do
+            {_target_resource, target_features} ->
+              validate_delta_resource(source_resource, source_features, target_features)
 
             # If the resource doesn't exist in the target, it might have just been removed
             nil ->
@@ -262,20 +265,41 @@ defmodule Confuse.Fwup do
     end
   end
 
-  defp validate_delta_resource(resource, sv, tv) do
-    [
-      (tv.raw_deltas_valid? and not sv.raw_write?) &&
-        "#{resource}: Target uses raw deltas but source has no raw writes.",
-      (tv.fat_deltas_valid? and not sv.fat_write?) &&
-        "#{resource}: Target uses FAT deltas but source has no FAT writes.",
-      (tv.raw_deltas_valid? and sv.raw_write_cipher? and sv.raw_write_secret? and
-         not (tv.delta_source_raw_options_cipher? and tv.delta_source_raw_options_secret?)) &&
-        "#{resource}: Target uses raw deltas and source firmware uses encryption for the same resource but target firmware has no cipher or secret options for the resource. This should not be able to work."
-    ]
-    |> Enum.filter(&is_binary/1)
+  defp validate_delta_resource(resource, source_features, target_features) do
+    errors = []
+
+    errors =
+      if target_features.raw_deltas_valid? and not source_features.raw_write? do
+        ["#{resource}: Target uses raw deltas but source has no raw writes." | errors]
+      else
+        errors
+      end
+
+    errors =
+      if target_features.fat_deltas_valid? and not source_features.fat_write? do
+        ["#{resource}: Target uses FAT deltas but source has no FAT writes." | errors]
+      else
+        errors
+      end
+
+    errors =
+      if target_features.raw_deltas_valid? and
+           source_features.raw_write_cipher? and
+           source_features.raw_write_secret? and
+           not (target_features.delta_source_raw_options_cipher? and
+                  target_features.delta_source_raw_options_secret?) do
+        [
+          "#{resource}: Target uses raw deltas and source firmware uses encryption for the same resource but target firmware has no cipher or secret options for the resource. This should not be able to work."
+          | errors
+        ]
+      else
+        errors
+      end
+
+    errors
   end
 
-  defp get_feature_by_resource(parsed) do
+  defp get_features_by_resource(parsed) do
     parsed
     |> get_tasks()
     |> reduce_on_resource(%{}, &check_feature/3)
