@@ -3,63 +3,44 @@ defmodule Confuse do
   Parse config files based on the libconfuse format.
   """
 
-  import Confuse.Helpers
-  import NimbleParsec
-
-  defcombinator(
-    :statement,
-    choice([
-      block(),
-      function_call(),
-      kv(),
-      blank(),
-      comment(),
-      multiline_comment()
-    ])
-    |> ignore(whitespace_or_end())
-    |> repeat()
-  )
-
-  defparsec(:parser, config())
-
   @doc """
   Parse a configuration string into a structured map.
   """
   @spec parse(data :: String.t()) :: {:ok, map()} | {:error, :parsing_failed}
   def parse(data) do
-    {:ok, parsed, _remainder, _, _, _} = parser(data)
-    {:ok, make_nice(parsed)}
+    with {:ok, tokens, _end_line} <- :confuse_lexer.string(String.to_charlist(data)),
+         {:ok, parsed} <- :confuse_parser.parse(tokens) do
+      {:ok, make_nice(parsed)}
+    else
+      _ -> {:error, :parsing_failed}
+    end
   end
 
-  defp make_nice(parsed) do
-    parsed
-    |> Enum.map(fn line ->
-      case line do
-        {:function_call, [function: name, args: args]} ->
-          {{:function, to_string(name)}, args}
+  defp make_nice(statements) do
+    statements
+    |> Enum.map(fn
+      {:kv, key, {:string, value}} ->
+        {key, value}
 
-        {:comment, _} ->
-          nil
+      {:kv, key, {:integer, value}} ->
+        {key, value}
 
-        # integer
-        {:kv, [key: key, integer: value]} ->
-          {to_string(key), value}
+      {:kv, key, {:tuple, items}} ->
+        {key, items}
 
-        # charlist string
-        {:kv, [key: key, string: value]} ->
-          {to_string(key), to_string(value)}
+      {:block, tag, label, body} ->
+        {{tag, label}, make_nice(body)}
 
-        {:kv, [key: key, tuple: value]} ->
-          {to_string(key), Enum.map(value, &to_string/1)}
-
-        {:block, [tag: tag, label: label, body: body]} ->
-          {{to_string(tag), to_string(label)}, make_nice(body)}
-
-        {:block, [tag: tag, body: body]} ->
-          {to_string(tag), make_nice(body)}
-      end
+      {:function_call, name, args} ->
+        {{:function, name}, flatten_args(args)}
     end)
-    |> Enum.reject(&is_nil/1)
     |> Map.new()
+  end
+
+  defp flatten_args(args) do
+    Enum.flat_map(args, fn
+      v when is_binary(v) -> String.to_charlist(v)
+      v when is_integer(v) -> [v]
+    end)
   end
 end

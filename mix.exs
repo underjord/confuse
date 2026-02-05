@@ -6,6 +6,7 @@ defmodule Confuse.MixProject do
       app: :confuse,
       version: "0.2.1",
       elixir: "~> 1.1",
+      compilers: [:leex, :yecc] ++ Mix.compilers(),
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       consolidate_protocols: Mix.env() != :dev,
@@ -78,7 +79,6 @@ defmodule Confuse.MixProject do
     [
       {:nstandard, "~> 0.1"},
       {:quokka, "~> 2.0", only: [:dev]},
-      {:nimble_parsec, "~> 1.0"},
       {:igniter, "~> 0.5", optional: true, runtime: false},
       {:ex_doc, "~> 0.31", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},

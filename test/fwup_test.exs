@@ -122,15 +122,12 @@ defmodule Confuse.FwupTest do
     blank.conf
     fat_deltas.conf
     high_requirement.conf
-    libconfuse-test.exs
     rpi4-fwup.conf
     rpi4-meta.conf
     with_deltas.conf
     encrypted.conf
     libconfuse-test.conf
     raw_deltas.conf
-    rpi4-fwup.exs
-    rpi4-meta.exs
     with_encrypted_deltas.conf)
     |> Enum.each(fn file ->
       conf = File.read!(Path.join("test/fixtures", file))
