@@ -25,7 +25,7 @@
     "machine" => "ftp://ftp.pdc.kth.se:21",
     "password" => "${ANONPASS:-anonymous@}"
   },
-  "BackLog" => 2147483647,
+  "BackLog" => 2_147_483_647,
   "ask-quit" => "maybe",
   "ask-quit-array" => ["no", "yes", "yes"],
   "probe-device" => "eth1"

@@ -18,7 +18,7 @@ defmodule Confuse do
 
   defp make_nice(statements) do
     statements
-    |> Enum.map(fn
+    |> Map.new(fn
       {:kv, key, {:string, value}} ->
         {key, value}
 
@@ -34,7 +34,6 @@ defmodule Confuse do
       {:function_call, name, args} ->
         {{:function, name}, flatten_args(args)}
     end)
-    |> Map.new()
   end
 
   defp flatten_args(args) do
