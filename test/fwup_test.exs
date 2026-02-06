@@ -344,4 +344,36 @@ defmodule Confuse.FwupTest do
     path = Path.join(tmp_dir, "foo.conf")
     assert {:error, :enoent} = Confuse.Fwup.get_delta_files(path)
   end
+
+  test "returns an error when source contains resource missing in target" do
+    source_conf = """
+    require-fwup-version="0.5.0"
+
+    task complete {
+      on-resource config.txt {
+        raw_write(0)
+      }
+      on-resource rootfs.img {
+        raw_write(0)
+      }
+    }
+    """
+
+    target_conf = """
+    require-fwup-version="1.6.0"
+
+    task upgrade {
+      on-resource config.txt {
+        delta-source-raw-offset=0
+        delta-source-raw-count=100
+        raw_write(0)
+      }
+    }
+    """
+
+    assert {:error, [err]} = Confuse.Fwup.validate_delta(source_conf, target_conf)
+
+    assert err =~
+             "rootfs.img: Resource exists in source firmware but not in target firmware"
+  end
 end

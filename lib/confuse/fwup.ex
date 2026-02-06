@@ -216,8 +216,15 @@ defmodule Confuse.Fwup do
       result =
         s
         |> Enum.flat_map(fn {resource, v} ->
-          {_, target_resource} = Enum.find(t, fn {r, _} -> r == resource end)
-          validate_delta_resource(resource, v, target_resource)
+          case Enum.find(t, fn {r, _} -> r == resource end) do
+            {_, target_resource} ->
+              validate_delta_resource(resource, v, target_resource)
+
+            nil ->
+              [
+                "#{resource}: Resource exists in source firmware but not in target firmware. Delta updates may fail."
+              ]
+          end
         end)
 
       case result ++ fwup_warnings do
