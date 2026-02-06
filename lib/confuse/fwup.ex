@@ -217,8 +217,8 @@ defmodule Confuse.Fwup do
         s
         |> Enum.flat_map(fn {resource, v} ->
           case Enum.find(t, fn {r, _} -> r == resource end) do
-            {_, target_resource} ->
-              validate_delta_resource(resource, v, target_resource)
+            {_, target_features} ->
+              validate_delta_resource(resource, v, target_features)
 
             nil ->
               [
