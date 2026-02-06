@@ -122,15 +122,12 @@ defmodule Confuse.FwupTest do
     blank.conf
     fat_deltas.conf
     high_requirement.conf
-    libconfuse-test.exs
     rpi4-fwup.conf
     rpi4-meta.conf
     with_deltas.conf
     encrypted.conf
     libconfuse-test.conf
     raw_deltas.conf
-    rpi4-fwup.exs
-    rpi4-meta.exs
     with_encrypted_deltas.conf)
     |> Enum.each(fn file ->
       conf = File.read!(Path.join("test/fixtures", file))
@@ -221,6 +218,125 @@ defmodule Confuse.FwupTest do
               delta_fwup_version: ^delta_version
             }} =
              Confuse.Fwup.get_feature_usage("test/fixtures/blank.conf")
+  end
+
+  test "get upgrade task files from rpi4 config" do
+    expected_files =
+      ~w(
+        bcm2711-rpi-4-b.dtb
+        bcm2711-rpi-400.dtb
+        bcm2711-rpi-cm4.dtb
+        cmdline.txt
+        config.txt
+        dwc2.dtbo
+        fixup4.dat
+        i2c-mux.dtbo
+        imx219.dtbo
+        imx296.dtbo
+        imx477.dtbo
+        imx708.dtbo
+        kernel8.img
+        miniuart-bt.dtbo
+        ov5647.dtbo
+        overlay_map.dtb
+        pwm-2chan.dtbo
+        pwm.dtbo
+        pwm1.dtbo
+        ramoops.dtbo
+        rootfs.img
+        rpi-backlight.dtbo
+        rpi-ft5406.dtbo
+        start4.elf
+        tc358743.dtbo
+        vc4-kms-dsi-7inch.dtbo
+        vc4-kms-dsi-ili9881-7inch.dtbo
+        vc4-kms-v3d-pi4.dtbo
+        vc4-kms-v3d.dtbo
+        w1-gpio-pullup.dtbo
+      )
+
+    assert {:ok, ^expected_files} =
+             Confuse.Fwup.get_upgrade_task_files("test/fixtures/rpi4-fwup.conf")
+  end
+
+  test "get upgrade task files from config string" do
+    conf = File.read!("test/fixtures/rpi4-fwup.conf")
+    assert {:ok, files} = Confuse.Fwup.get_upgrade_tasks_files_from_config(conf)
+    assert "rootfs.img" in files
+    assert "config.txt" in files
+    assert length(files) == 30
+  end
+
+  test "get upgrade task files from config with no upgrade tasks" do
+    assert {:ok, []} = Confuse.Fwup.get_upgrade_tasks_files_from_config("")
+  end
+
+  test "get upgrade task files excludes non-upgrade tasks" do
+    conf = """
+    task complete {
+      on-resource kernel8.img {
+        fat_write(10, "kernel8.img")
+      }
+      on-resource config.txt {
+        fat_write(10, "config.txt")
+      }
+      on-resource rootfs.img {
+        raw_write(0)
+      }
+      on-resource extra-boot.bin {
+        fat_write(10, "extra-boot.bin")
+      }
+    }
+    task upgrade.a {
+      on-resource config.txt {
+        fat_write(10, "config.txt")
+      }
+      on-resource rootfs.img {
+        raw_write(100)
+      }
+    }
+    task provision {
+      on-resource provision-data.img {
+        raw_write(200)
+      }
+      on-resource provision-key.bin {
+        raw_write(300)
+      }
+    }
+    """
+
+    assert {:ok, ["config.txt", "rootfs.img"]} =
+             Confuse.Fwup.get_upgrade_tasks_files_from_config(conf)
+  end
+
+  test "get upgrade task files deduplicates across upgrade.a and upgrade.b" do
+    conf = """
+    task upgrade.a {
+      on-resource rootfs.img {
+        raw_write(100)
+      }
+      on-resource config.txt {
+        fat_write(50, "config.txt")
+      }
+    }
+    task upgrade.b {
+      on-resource rootfs.img {
+        raw_write(200)
+      }
+      on-resource config.txt {
+        fat_write(60, "config.txt")
+      }
+    }
+    """
+
+    assert {:ok, ["config.txt", "rootfs.img"]} =
+             Confuse.Fwup.get_upgrade_tasks_files_from_config(conf)
+  end
+
+  @tag :tmp_dir
+  test "fail to load upgrade task files", %{tmp_dir: tmp_dir} do
+    path = Path.join(tmp_dir, "nonexistent.conf")
+    assert {:error, :enoent} = Confuse.Fwup.get_upgrade_task_files(path)
   end
 
   @tag :tmp_dir

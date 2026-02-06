@@ -24,3 +24,8 @@ confuse-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+# Generated lexer and parser files
+/src/confuse_lexer.erl
+/src/confuse_parser.erl
+.claude

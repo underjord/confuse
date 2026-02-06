@@ -227,6 +227,35 @@ defmodule Confuse.Fwup do
     end
   end
 
+  @spec get_upgrade_tasks_files_from_config(config_data :: String.t()) ::
+          {:ok, [String.t()]} | {:error, :parsing_failed}
+  def get_upgrade_tasks_files_from_config(config_data) do
+    with {:ok, parsed} <- Confuse.parse(config_data) do
+      files =
+        parsed
+        |> get_tasks()
+        |> only_upgrade_tasks()
+        |> Enum.flat_map(fn {_task, contents} ->
+          Enum.flat_map(contents, fn
+            {{"on-resource", resource}, _contents} -> [resource]
+            _ -> []
+          end)
+        end)
+        |> Enum.sort()
+        |> Enum.uniq()
+
+      {:ok, files}
+    end
+  end
+
+  @spec get_upgrade_task_files(file :: String.t()) ::
+          {:ok, [String.t()]} | {:error, :parsing_failed | File.posix()}
+  def get_upgrade_task_files(file) do
+    with {:ok, contents} <- File.read(file) do
+      get_upgrade_tasks_files_from_config(contents)
+    end
+  end
+
   defp validate_delta_resource(resource, sv, tv) do
     [
       (tv.raw_deltas_valid? and not sv.raw_write?) &&
@@ -341,6 +370,12 @@ defmodule Confuse.Fwup do
 
   defp on_resource(_, acc, _) do
     acc
+  end
+
+  defp only_upgrade_tasks(tasks) do
+    Enum.filter(tasks, fn {task, _} ->
+      task == "upgrade" or String.starts_with?(task, "upgrade.")
+    end)
   end
 
   defp only_tasks_with_deltas(tasks) do
