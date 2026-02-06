@@ -4,7 +4,7 @@ defmodule Confuse.MixProject do
   def project() do
     [
       app: :confuse,
-      version: "0.2.1",
+      version: "0.3.0",
       elixir: "~> 1.1",
       compilers: [:leex, :yecc] ++ Mix.compilers(),
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -61,8 +61,7 @@ defmodule Confuse.MixProject do
         "format --check-formatted",
         "credo --strict",
         "deps.unlock --check-unused",
-        "dialyzer",
-        "spellweaver.check"
+        "dialyzer"
       ]
     ]
   end

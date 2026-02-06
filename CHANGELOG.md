@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.3.0
+
+Replace nimble_parsec with yecc and leex to avoid tearing hair out while debugging.
+
+## v0.2.1
+
+Fix handling of escaped double quotes in strings.
+
 ## v0.2.0
 
 Add `Confuse.Fwup` functions for processing config that has already been read from file. This allows doing things more efficiently when making multiple calls and so on.
