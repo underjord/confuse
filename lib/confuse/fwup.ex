@@ -216,8 +216,14 @@ defmodule Confuse.Fwup do
       result =
         s
         |> Enum.flat_map(fn {resource, v} ->
-          {_, target_resource} = Enum.find(t, fn {r, _} -> r == resource end)
-          validate_delta_resource(resource, v, target_resource)
+          case Enum.find(t, fn {r, _} -> r == resource end) do
+            {_, target_features} ->
+              validate_delta_resource(resource, v, target_features)
+
+            # If the resource doesn't exist in the target, it might have just been removed
+            nil ->
+              []
+          end
         end)
 
       case result ++ fwup_warnings do
