@@ -220,10 +220,9 @@ defmodule Confuse.Fwup do
             {_, target_features} ->
               validate_delta_resource(resource, v, target_features)
 
+            # If the resource doesn't exist in the target, it might have just been removed
             nil ->
-              [
-                "#{resource}: Resource exists in source firmware but not in target firmware. Delta updates may fail."
-              ]
+              []
           end
         end)
 

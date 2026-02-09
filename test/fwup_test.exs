@@ -371,9 +371,6 @@ defmodule Confuse.FwupTest do
     }
     """
 
-    assert {:error, [err]} = Confuse.Fwup.validate_delta(source_conf, target_conf)
-
-    assert err =~
-             "rootfs.img: Resource exists in source firmware but not in target firmware"
+    assert :ok = Confuse.Fwup.validate_delta(source_conf, target_conf)
   end
 end
