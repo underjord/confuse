@@ -16,8 +16,6 @@
   ],
   "words": [
     "cspell",
-    "defcombinator",
-    "defparsec",
     "dialyxir",
     "ecto",
     "esbuild",
@@ -25,10 +23,13 @@
     "fwup",
     "heroicons",
     "hexpm",
+    "idchar",
     "ilike",
     "inotify",
     "libconfuse",
     "liveview",
+    "leex",
+    "nonterminals",
     "noopener",
     "noreferrer",
     "novalidate",
@@ -37,8 +38,11 @@
     "oban",
     "postgrex",
     "rebar",
+    "rootsymbol",
     "spellweaver",
+    "sublist",
     "tzdata",
-    "underjord"
+    "underjord",
+    "yecc"
   ]
 }
