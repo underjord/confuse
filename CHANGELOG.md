@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.3.1
+
+Do not error out on validating a delta where a source file is missing in the target. This is valid. It can just have been removed.
+
 ## v0.3.0
 
 Replace nimble_parsec with yecc and leex to avoid tearing hair out while debugging.
