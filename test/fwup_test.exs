@@ -345,6 +345,61 @@ defmodule Confuse.FwupTest do
     assert {:error, :enoent} = Confuse.Fwup.get_delta_files(path)
   end
 
+  test "specified_fwup_version is populated when require-fwup-version is present" do
+    conf = """
+    require-fwup-version="2.0.0"
+
+    task upgrade.a {
+      on-resource rootfs.img {
+        raw_write(0)
+      }
+    }
+    """
+
+    expected_version = Version.parse!("2.0.0")
+
+    assert {:ok, %Confuse.Fwup.Features{specified_fwup_version: ^expected_version}} =
+             Confuse.Fwup.get_feature_usage_from_config(conf)
+  end
+
+  test "specified_fwup_version is nil when require-fwup-version is absent" do
+    conf = """
+    task upgrade.a {
+      on-resource rootfs.img {
+        raw_write(0)
+      }
+    }
+    """
+
+    assert {:ok, %Confuse.Fwup.Features{specified_fwup_version: nil}} =
+             Confuse.Fwup.get_feature_usage_from_config(conf)
+  end
+
+  test "specified_fwup_version does not affect computed complete_fwup_version or delta_fwup_version" do
+    conf = """
+    require-fwup-version="2.0.0"
+
+    task upgrade.a {
+      on-resource rootfs.img {
+        delta-source-raw-offset=0
+        delta-source-raw-count=1
+        raw_write(0)
+      }
+    }
+    """
+
+    specified_version = Version.parse!("2.0.0")
+    raw_delta_version = Version.parse!("1.6.0")
+
+    assert {:ok,
+            %Confuse.Fwup.Features{
+              specified_fwup_version: ^specified_version,
+              raw_deltas?: true,
+              delta_fwup_version: ^raw_delta_version
+            }} =
+             Confuse.Fwup.get_feature_usage_from_config(conf)
+  end
+
   test "returns an error when source contains resource missing in target" do
     source_conf = """
     require-fwup-version="0.5.0"

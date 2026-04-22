@@ -49,7 +49,8 @@ defmodule Confuse.Fwup do
 
     @spec squash([Confuse.Fwup.validation()], String.t() | nil) :: t()
     def squash(feature_usages, fwup_version) do
-      fwup_version = Version.parse!(fwup_version || @absolute_minimum_fwup)
+      specified_version = if fwup_version, do: Version.parse!(fwup_version), else: nil
+      parsed_version = specified_version || Version.parse!(@absolute_minimum_fwup)
 
       feature_usages
       |> Enum.reduce(%Features{valid?: true}, fn f, acc ->
@@ -68,7 +69,8 @@ defmodule Confuse.Fwup do
                    (not f.delta_source_fat_offset? or f.fat_deltas_valid?))
         }
       end)
-      |> calculate_version(fwup_version)
+      |> calculate_version(parsed_version)
+      |> then(&%{&1 | specified_fwup_version: specified_version})
     end
 
     defp calculate_version(features, minimum_version) do
