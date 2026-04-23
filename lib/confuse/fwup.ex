@@ -34,6 +34,7 @@ defmodule Confuse.Fwup do
               specified_fwup_version: nil,
               complete_fwup_version: Version.parse!(@absolute_minimum_fwup),
               delta_fwup_version: Version.parse!(@raw_deltas_fwup),
+              block_cache_size_mb: nil,
               valid?: false
 
     @type t() :: %__MODULE__{
@@ -44,6 +45,7 @@ defmodule Confuse.Fwup do
             specified_fwup_version: Version.t() | nil,
             complete_fwup_version: Version.t(),
             delta_fwup_version: Version.t(),
+            block_cache_size_mb: non_neg_integer() | nil,
             valid?: boolean()
           }
 
@@ -171,6 +173,7 @@ defmodule Confuse.Fwup do
         |> reduce_on_resource(%{}, &check_feature/3)
         |> Map.values()
         |> Features.squash(parsed["require-fwup-version"])
+        |> then(&%{&1 | block_cache_size_mb: parsed["block-cache-size-mb"]})
 
       {:ok, output}
     end
