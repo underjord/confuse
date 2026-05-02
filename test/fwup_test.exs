@@ -373,4 +373,39 @@ defmodule Confuse.FwupTest do
 
     assert :ok = Confuse.Fwup.validate_delta(source_conf, target_conf)
   end
+
+  test "reads block-cache-size-mb when present" do
+    conf = """
+    require-fwup-version="1.6.0"
+    block-cache-size-mb = 256
+
+    task upgrade {
+      on-resource rootfs.img {
+        delta-source-raw-offset=0
+        delta-source-raw-count=1048576
+        raw_write(0)
+      }
+    }
+    """
+
+    assert {:ok, %Confuse.Fwup.Features{block_cache_size_mb: 256}} =
+             Confuse.Fwup.get_feature_usage_from_config(conf)
+  end
+
+  test "block_cache_size_mb is nil when not specified" do
+    conf = """
+    require-fwup-version="1.6.0"
+
+    task upgrade {
+      on-resource rootfs.img {
+        delta-source-raw-offset=0
+        delta-source-raw-count=1048576
+        raw_write(0)
+      }
+    }
+    """
+
+    assert {:ok, %Confuse.Fwup.Features{block_cache_size_mb: nil}} =
+             Confuse.Fwup.get_feature_usage_from_config(conf)
+  end
 end
